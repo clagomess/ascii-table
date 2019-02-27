@@ -1,4 +1,16 @@
 # ascii-table
+### Usage
+Install local Maven: `mvn clean install`
+
+Add as depedency:
+```xml
+<dependency>
+    <groupId>com.github.clagomess</groupId>
+    <artifactId>ascii-table</artifactId>
+    <version>1.0.1</version>
+</dependency>
+```
+
 ### List Map
 ```java
 List<Map<String,String>> dadosMap = new LinkedList<>();
