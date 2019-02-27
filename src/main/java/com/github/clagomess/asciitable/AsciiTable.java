@@ -52,7 +52,7 @@ public class AsciiTable {
         List<String> rowList = new LinkedList<>();
 
         for (Map.Entry<String, String> entry : row.entrySet()) {
-            rowList.add(entry.getValue() != null ? entry.getValue().toString() : null);
+            rowList.add(entry.getValue());
         }
 
         body.add(rowList);
