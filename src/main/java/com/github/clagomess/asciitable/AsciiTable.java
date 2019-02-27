@@ -1,72 +1,168 @@
 package com.github.clagomess.asciitable;
 
-import java.util.LinkedHashMap;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+@NoArgsConstructor
 public class AsciiTable {
-    public static String build(List<Map<String,String>> dadosMap) {
-        StringBuilder txt = new StringBuilder();
+    private boolean showRowLine = true;
+    private boolean showHeader = true;
 
-        if(dadosMap.isEmpty()){
-            return "";
+    @Setter
+    private List<String> header = new LinkedList<>();
+
+    @Setter
+    private List<List<String>> body = new LinkedList<>();
+
+    private List<Integer> columnSize = new LinkedList<>();
+
+    public AsciiTable(boolean showHeader, boolean showRowLine){
+        this.showRowLine = showRowLine;
+        this.showHeader = showHeader;
+    }
+
+    public AsciiTable(List<Map<String,String>> map){
+        header = new LinkedList<>();
+        body = new LinkedList<>();
+
+        for (Map.Entry<String, String> entry : map.get(0).entrySet()) {
+            header.add(entry.getKey());
         }
 
-        Map<String, Integer> columnSize = new LinkedHashMap<>();
-        StringBuilder separador = new StringBuilder();
+        for (Map<String,String> row : map){
+            addBodyRow(row);
+        }
+    }
 
-        // Verificar tamanhos colunas
-        boolean checkHeadSize = false;
-        for (Map<String,String> row : dadosMap){
-            for (Map.Entry<String, String> entry : row.entrySet()) {
-                final String curr = (entry.getValue() != null ? entry.getValue() : "-");
+    public AsciiTable(List<Map<String,String>> map, boolean showHeader, boolean showRowLine){
+        this(map);
+        this.showRowLine = showRowLine;
+        this.showHeader = showHeader;
+    }
 
-                if(!columnSize.containsKey(entry.getKey())){
-                    columnSize.put(entry.getKey(), 1);
-                }
+    public void addBodyRow(List<String> row){
+        body.add(row);
+    }
 
-                if(curr.length() > columnSize.get(entry.getKey())){
-                    columnSize.put(entry.getKey(), curr.length());
-                }
+    public void addBodyRow(Map<String, String> row){
+        List<String> rowList = new LinkedList<>();
 
-                if(!checkHeadSize && entry.getKey().length() > columnSize.get(entry.getKey())){
-                    columnSize.put(entry.getKey(), entry.getKey().length());
-                }
+        for (Map.Entry<String, String> entry : row.entrySet()) {
+            rowList.add(entry.getValue() != null ? entry.getValue().toString() : null);
+        }
+
+        body.add(rowList);
+    }
+
+    private void initColumnSize(){
+        if(!columnSize.isEmpty()){
+            return;
+        }
+
+        if(showHeader) {
+            for (int idx = 0; idx < header.size(); idx++) {
+                columnSize.add(1);
+            }
+        }
+
+        if(columnSize.isEmpty() && !body.isEmpty()){
+            for(int idx = 0; idx < body.get(0).size(); idx++){
+                columnSize.add(1);
+            }
+        }
+    }
+
+    private void setColumnSize(List<String> row){
+        initColumnSize();
+        int idx = 0;
+
+        for (String col : row) {
+            final String curr = (col != null ? col : "-");
+
+            if(curr.length() > columnSize.get(idx)){
+                columnSize.set(idx, curr.length());
             }
 
-            checkHeadSize = true;
+            idx++;
+        }
+    }
+
+    private StringBuilder getSeparator(char style){
+        StringBuilder separador = new StringBuilder();
+
+        for (int size : columnSize) {
+            separador.append("+");
+            separador.append(style);
+            separador.append((new String(new byte[size])).replace('\0', style));
+            separador.append(style);
         }
 
-        // Monta separador
-        for (Map.Entry<String, Integer> entry : columnSize.entrySet()) {
-            separador.append("+-");
-            separador.append((new String(new byte[entry.getValue()])).replace("\0", "-"));
-            separador.append("-");
-        }
         separador.append("+\r\n");
 
-        // Monta TXT
-        txt.append(separador.toString().replace("-", "="));
-        for (Map.Entry<String, String> entry : dadosMap.get(0).entrySet()) {
-            String curr = entry.getKey();
-            Integer paddingLength = columnSize.get(curr) - curr.length();
+        return separador;
+    }
+
+    private StringBuilder buildRow(List<String> row){
+        StringBuilder txt = new StringBuilder();
+
+        int idx = 0;
+        for (String col : row) {
+            String curr = col == null ? "-" : col;
+            Integer paddingLength = columnSize.get(idx) - curr.length();
             String padding = (new String(new byte[paddingLength])).replace("\0", " ");
 
             txt.append("| ").append(curr).append(padding).append(" ");
+            idx++;
         }
+
         txt.append("|\r\n");
-        txt.append(separador.toString().replace("-", "="));
 
-        for (Map<String,String> row : dadosMap){
-            for (Map.Entry<String, String> entry : row.entrySet()) {
-                String curr = (entry.getValue() != null ? entry.getValue() : "");
-                Integer paddingLength = columnSize.get(entry.getKey()) - curr.length();
-                String padding = (new String(new byte[paddingLength])).replace("\0", " ");
+        return txt;
+    }
 
-                txt.append("| ").append(curr).append(padding).append(" ");
+    public String build() throws AsciiTableException {
+        StringBuilder txt = new StringBuilder();
+
+        if(body.isEmpty()){
+            return "";
+        }
+
+        if(header.size() != body.get(0).size() && showHeader){
+            throw new AsciiTableException("header size and body size are not equal");
+        }
+
+        // Verificar tamanhos colunas: header and body
+        if(showHeader) {
+            setColumnSize(header);
+        }
+
+        for (List<String> row : body) {
+            setColumnSize(row);
+        }
+
+        // Monta TXT
+        if(showHeader) {
+            txt.append(getSeparator(showRowLine ? '=' : '-'));
+            txt.append(buildRow(header));
+            txt.append(getSeparator(showRowLine ? '=' : '-'));
+        }else{
+            txt.append(getSeparator('-'));
+        }
+
+        for (List<String> row : body){
+            txt.append(buildRow(row));
+
+            if(showRowLine){
+                txt.append(getSeparator('-'));
             }
-            txt.append("|\r\n");
-            txt.append(separador);
+        }
+
+        if(!showRowLine){
+            txt.append(getSeparator('-'));
         }
 
         return txt.toString();
