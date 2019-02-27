@@ -50,6 +50,15 @@ System.out.println(at.build());
 AsciiTable at = new AsciiTable(dadosMap, false, true);
 System.out.println(at.build());
 ```
+```
++---------+---------+---------+
+| value_c | value_b | value_a |
++---------+---------+---------+
+| value_c | value_b | value_a |
++---------+---------+---------+
+| value_c | value_b | value_a |
++---------+---------+---------+
+```
 
 ### RowList
 ```java
